@@ -10,6 +10,7 @@ contract PivotTopic {
     uint256 private _topicId;
     uint16  private _commissionrate = 3;
     uint256 public _totalBalance;
+    uint256 public _totalCommission;
 
     mapping (uint256 topicId => address) private _promoter;
     mapping (address owner => uint256) private _income;
@@ -21,6 +22,7 @@ contract PivotTopic {
     event CreateTopic(address indexed promoter, uint256 topicId);
     event Invest(address indexed investor, uint256 indexed topicId, uint256 amount);
     event Withdraw(address indexed to, uint256 amount);
+    event WithdrawCommission(address indexed owner, uint256 amount);
 
     constructor(address a) {
         owner = msg.sender;
@@ -101,6 +103,7 @@ contract PivotTopic {
             (bool success,uint256 diff) = Math.trySub(income, investment);
             require(success,"Calculate Fault");
             uint256 commission = diff / 100 * _commissionrate;
+            _totalCommission = _totalCommission + commission;
             (success,income) = Math.trySub(income, commission);
             require(success,"Calculate Fault");
         }
@@ -109,6 +112,14 @@ contract PivotTopic {
         _income[to] = 0;
 
         emit Withdraw(msg.sender, income);
+    }
+
+    function withdrawCommission(uint256 amount) public {
+        require(amount < _totalCommission, "Insufficient Balance");
+        require(msg.sender == owner, "Invalid Owner");
+        _transferTo(msg.sender, amount);
+        _totalCommission = _totalCommission - amount;
+        emit WithdrawCommission(msg.sender, amount);
     }
 
     function _transferTo(address to, uint256 amount) internal {
