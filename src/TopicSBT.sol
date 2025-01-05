@@ -9,26 +9,29 @@ contract TopicSBT is ERC721, Ownable {
     uint256 private _nextTokenId;
     bool private _disabled = true;
 
-    mapping(uint256 tokenId => uint256) public topicIds;
-    mapping(uint256 tokenId => uint256) public positions;
+    mapping(uint256 tokenId => uint256) public topicId;
+    mapping(uint256 tokenId => uint256) public position;
+    mapping(uint256 tokenId => uint256) public investmentAmount;
 
 
-    event Mint(address indexed to, uint256 tokenId, uint256 topicId, uint256 position);
+    event Mint(address indexed to, uint256 tokenId, uint256 topicId, uint256 position, uint256 investmentAmount);
 
 
     constructor(address initialOwner, string memory name, string memory symbol) ERC721(name, symbol) Ownable(initialOwner) {
         _nextTokenId = 1;
     }
 
-    function mint(address to, uint256 topicId, uint256 position) public onlyOwner{
+    function mint(address to, uint256 id, uint256 pos, uint256 inv) public onlyOwner{
 
         _safeMint(to, _nextTokenId);
 
-        topicIds[_nextTokenId] = topicId;
+        topicId[_nextTokenId] = id;
 
-        positions[_nextTokenId] = position;
+        position[_nextTokenId] = pos;
 
-        emit Mint(to, _nextTokenId, topicId, position);
+        investmentAmount[_nextTokenId] = inv;
+
+        emit Mint(to, _nextTokenId, id, pos, inv);
 
         _nextTokenId++;
 
