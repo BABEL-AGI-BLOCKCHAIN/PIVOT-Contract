@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "forge-std/console.sol";
 
 contract PivotTopic {
     address public owner;
@@ -57,7 +58,7 @@ contract PivotTopic {
     function createTopic(uint256 amount) public {
 
         address promoter = msg.sender;
-
+        console.log(promoter);
         _promoter[_topicId] = msg.sender;
 
         require(amount > 0,"Insufficient Amount");
@@ -67,14 +68,14 @@ contract PivotTopic {
         uint256 position = 1;
 
         _investAddressMap[_topicId][position] = promoter;
+        erc20Contract.transferFrom(promoter, address(this), amount);
+        sbtContract.mint(promoter, _topicId, position, amount);
 
         position ++;
 
         _position[_topicId] = position;
 
         _topicId ++;
-
-        erc20Contract.transfer(address(this), amount);
 
         emit CreateTopic(promoter, _topicId, amount);
 
@@ -84,13 +85,13 @@ contract PivotTopic {
 
         uint256 fixedInvestment = _fixedInvestment[topicId];
         require(fixedInvestment == amount, "Insufficient Balance");
-
-        erc20Contract.transfer(address(this), amount);
+        address investor = msg.sender;
+        erc20Contract.transferFrom(investor, address(this), amount);
         _totalBalance += amount;
 
         uint256 position = _position[topicId] + 1;
 
-        sbtContract.mint(msg.sender, topicId, position);
+        sbtContract.mint(investor, topicId, position, amount);
 
         for (uint256 i = 0; i < position; i++) {
             address investAddress = _investAddressMap[topicId][i + 1];
@@ -99,7 +100,7 @@ contract PivotTopic {
             _income[investAddress] = _income[investAddress] + income;
         }
         _position[topicId] = position;
-        emit Invest(msg.sender, topicId, fixedInvestment);
+        emit Invest(investor, topicId, fixedInvestment);
     }
 
     function withdraw() public {
@@ -136,5 +137,5 @@ contract PivotTopic {
 }
 
 interface ISBTContract {
-    function mint(address to, uint256 topicId, uint256 position) external;
+    function mint(address to, uint256 topicId, uint256 position, uint256 inv) external;
 }
