@@ -87,6 +87,7 @@ contract AbandonedPivotTopic {
         erc20Contract.transferFrom(investor, address(this), amount);
         _totalBalance += amount;
 
+        uint256 position = _position[topicId] + 1;
         for (uint256 i = 0; i < position; i++) {
             address investAddress = _investAddressMap[topicId][i + 1];
             (bool success, uint256 income) = Math.tryDiv(fixedInvestment, position);
@@ -94,7 +95,7 @@ contract AbandonedPivotTopic {
             _income[investAddress] = _income[investAddress] + income;
         }
         
-        uint256 position = _position[topicId] + 1;
+        
         
         sbtContract.mint(investor, topicId, position, amount);
         _investAddressMap[_topicId][position] = investor;

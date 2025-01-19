@@ -29,7 +29,6 @@ contract PivotTopicTest is Test {
         erc20 = new TopicERC20("erc20", "ERC20", 100000000);
     
         pivotTopic = new PivotTopic(address(sbt));
-        pivotTopic.setERC20Contract(address(erc20));
         erc20.transfer(owner, 1000);
         erc20.transfer(investor, 1000);
         erc20.transfer(msg.sender, 1000);
@@ -66,19 +65,27 @@ contract PivotTopicTest is Test {
         address msgSender = msg.sender;
         vm.prank(msgSender);
         erc20.approve(address(pivotTopic),500);
-
+        
+        string memory hashString = "hello";
+        bytes32 testHash = keccak256(abi.encodePacked(hashString));
         vm.prank(msgSender);
-        pivotTopic.createTopic(500);
+        pivotTopic.createTopic(500, address(erc20), testHash);
         assertEq(erc20.balanceOf(address(pivotTopic)), 500);
+        assertEq(pivotTopic.getInvestment(msgSender,1), 500);
+        assertEq(pivotTopic.getFixedInvestment(1), 500);
+        assertEq(pivotTopic.getPromoter(1), msgSender);
+        assertEq(pivotTopic._totalBalance(1), 500);
+        assertEq(pivotTopic.topicCoin(1), address(erc20));
     }
 
     function test_invest() public {
         address msgSender = msg.sender;
         vm.prank(msgSender);
         erc20.approve(address(pivotTopic),500);
-
+        string memory hashString = "hello";
+        bytes32 testHash = keccak256(abi.encodePacked(hashString));
         vm.prank(msgSender);
-        pivotTopic.createTopic(500);
+        pivotTopic.createTopic(500, address(erc20), testHash);
 
         vm.prank(owner);
         erc20.approve(address(pivotTopic), 500);

@@ -74,10 +74,13 @@ contract PivotTopic {
         topicCoin[_topicId] = erc20Address;
         IERC20 erc20Contract = IERC20(erc20Address);
         erc20Contract.transferFrom(promoter, address(this), amount);
+        _investment[promoter][_topicId] = amount;
+        _totalBalance[_topicId] = amount;
         sbtContract.mint(promoter, _topicId, position, amount);
 
 
-        emit CreateTopic(promoter, _topicId, amount);
+        emit CreateTopic(promoter, _topicId, amount, _nonce);
+        _nonce++;
 
     }
 
@@ -88,9 +91,11 @@ contract PivotTopic {
 
         address erc20Address = topicCoin[topicId];
         IERC20 erc20Contract = IERC20(erc20Address);
-        erc20Contract.transferFrom(promoter, address(this), amount);
+        erc20Contract.transferFrom(investor, address(this), amount);
+        _investment[investor][topicId] = _investment[investor][topicId] + amount;
         _totalBalance[topicId] = _totalBalance[topicId] + amount;
 
+        uint256 position = _position[topicId] + 1;
         for (uint256 i = 0; i < position; i++) {
             address investAddress = _investAddressMap[topicId][i + 1];
             (bool success, uint256 income) = Math.tryDiv(fixedInvestment, position);
@@ -98,14 +103,14 @@ contract PivotTopic {
             _income[investAddress][topicId] = _income[investAddress][topicId] + income;
         }
 
-        uint256 position = _position[topicId] + 1;
+        
         _investAddressMap[topicId][position] = investor;
-        sbtContract.mint(investor, topicId, position);
+        sbtContract.mint(investor, topicId, position, amount);
 
         
         _position[topicId] = position;
-        emit Invest(investor, topicId, fixedInvestment, nonce);
-        nonce ++;
+        emit Invest(investor, topicId, fixedInvestment, _nonce);
+        _nonce ++;
     }
 
     function withdraw(uint256 topicId) public {
@@ -129,8 +134,8 @@ contract PivotTopic {
         erc20Contract.transferFrom(address(this), to, income);
         _income[to][topicId] = 0;
         _totalBalance[topicId] = _totalBalance[topicId] - income;
-        emit Withdraw(msg.sender, income, nonce);
-        nonce ++;
+        emit Withdraw(msg.sender, income, _nonce);
+        _nonce ++;
     }
 
     function withdrawCommission(uint256 amount, uint256 topicId) public {
@@ -140,13 +145,13 @@ contract PivotTopic {
         IERC20 erc20Contract = IERC20(erc20Address);
         erc20Contract.transferFrom(address(this), owner, amount);
         _totalCommission[topicId] = _totalCommission[topicId] - amount;
-        emit WithdrawCommission(owner, amount, nonce);
-        nonce ++;
+        emit WithdrawCommission(owner, amount, _nonce);
+        _nonce ++;
     }
 
 
 }
 
 interface ISBTContract {
-    function mint(address to, uint256 topicId, uint256 position) external;
+    function mint(address to, uint256 topicId, uint256 position, uint256 inv) external;
 }
