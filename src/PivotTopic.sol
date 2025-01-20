@@ -17,6 +17,7 @@ contract PivotTopic {
     mapping (uint256 topicId => address) private _promoter;
     mapping (uint256 topicId => bytes32) public _topicHash;
     mapping (address investor => mapping(uint256 topicId => uint256)) private _income;
+    mapping (address investor => mapping(uint256 topicId => uint256)) private _receivedIncome;
     mapping (address investor => mapping(uint256 topicId => uint256)) private _investment;
     mapping (uint256 topicId => uint256) private _fixedInvestment;
     mapping (uint256 topicId => uint256) private _position;
@@ -75,6 +76,7 @@ contract PivotTopic {
         IERC20 erc20Contract = IERC20(erc20Address);
         erc20Contract.transferFrom(promoter, address(this), amount);
         _investment[promoter][_topicId] = amount;
+        _income[promoter][_topicId] = amount;
         _totalBalance[_topicId] = amount;
         sbtContract.mint(promoter, _topicId, position, amount);
 
@@ -96,6 +98,7 @@ contract PivotTopic {
         _totalBalance[topicId] = _totalBalance[topicId] + amount;
 
         uint256 position = _position[topicId] + 1;
+        _investAddressMap[topicId][position] = investor;
         for (uint256 i = 0; i < position; i++) {
             address investAddress = _investAddressMap[topicId][i + 1];
             (bool success, uint256 income) = Math.tryDiv(fixedInvestment, position);
@@ -103,8 +106,6 @@ contract PivotTopic {
             _income[investAddress][topicId] = _income[investAddress][topicId] + income;
         }
 
-        
-        _investAddressMap[topicId][position] = investor;
         sbtContract.mint(investor, topicId, position, amount);
 
         
@@ -117,11 +118,12 @@ contract PivotTopic {
 
         address to = msg.sender;
         uint256 income = _income[to][topicId];
+        uint256 receivedIncome =  _receivedIncome[to][topicId];
         require(income >= 0,"Insufficient Balance");
         uint256 investment = _investment[to][topicId];
-
-        if(investment < income) {
-            (bool success,uint256 diff) = Math.trySub(income, investment);
+        uint256 sum = income + receivedIncome;
+        if(investment > receivedIncome && investment < sum) {
+            (bool success, uint256 diff) = Math.trySub(sum, investment);
             require(success,"Calculate Fault");
             uint256 commission = diff / 1000 * _commissionrate;
             _totalCommission[topicId] = _totalCommission[topicId] + commission;
@@ -129,10 +131,19 @@ contract PivotTopic {
             require(success,"Calculate Fault");
         }
 
+        if(investment <= receivedIncome) {
+            uint256 commission = income / 1000 * _commissionrate;
+            _totalCommission[topicId] = _totalCommission[topicId] + commission;
+            bool success;
+            (success,income) = Math.trySub(income, commission);
+            require(success,"Calculate Fault");
+        }
+
         address erc20Address = topicCoin[topicId];
         IERC20 erc20Contract = IERC20(erc20Address);
-        erc20Contract.transferFrom(address(this), to, income);
+        erc20Contract.transfer(to, income);
         _income[to][topicId] = 0;
+        _receivedIncome[to][topicId] = _receivedIncome[to][topicId] + income;
         _totalBalance[topicId] = _totalBalance[topicId] - income;
         emit Withdraw(msg.sender, income, _nonce);
         _nonce ++;
@@ -143,7 +154,7 @@ contract PivotTopic {
         require(msg.sender == owner, "Invalid Owner");
         address erc20Address = topicCoin[topicId];
         IERC20 erc20Contract = IERC20(erc20Address);
-        erc20Contract.transferFrom(address(this), owner, amount);
+        erc20Contract.transfer(owner, amount);
         _totalCommission[topicId] = _totalCommission[topicId] - amount;
         emit WithdrawCommission(owner, amount, _nonce);
         _nonce ++;

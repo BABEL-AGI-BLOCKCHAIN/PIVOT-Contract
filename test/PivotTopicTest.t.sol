@@ -29,9 +29,9 @@ contract PivotTopicTest is Test {
         erc20 = new TopicERC20("erc20", "ERC20", 100000000);
     
         pivotTopic = new PivotTopic(address(sbt));
-        erc20.transfer(owner, 1000);
-        erc20.transfer(investor, 1000);
-        erc20.transfer(msg.sender, 1000);
+        erc20.transfer(owner, 10000000);
+        erc20.transfer(investor, 10000000);
+        erc20.transfer(msg.sender, 10000000);
         vm.prank(owner);
         sbt.transferOwnership(address(pivotTopic));
     }
@@ -53,10 +53,10 @@ contract PivotTopicTest is Test {
     }
 
     function test_ERC20Balance() public {
-        assertEq(erc20.balanceOf(msg.sender), 1000);
-        assertEq(erc20.balanceOf(owner), 1000);
-        assertEq(erc20.balanceOf(investor), 1000);
-        assertEq(erc20.balanceOf(address(this)), 100000000 - 3000);
+        assertEq(erc20.balanceOf(msg.sender), 10000000);
+        assertEq(erc20.balanceOf(owner), 10000000);
+        assertEq(erc20.balanceOf(investor), 10000000);
+        assertEq(erc20.balanceOf(address(this)), 100000000 - 30000000);
     }
 
 
@@ -64,32 +64,89 @@ contract PivotTopicTest is Test {
 
         address msgSender = msg.sender;
         vm.prank(msgSender);
-        erc20.approve(address(pivotTopic),500);
+        erc20.approve(address(pivotTopic),5000000);
         
         string memory hashString = "hello";
         bytes32 testHash = keccak256(abi.encodePacked(hashString));
         vm.prank(msgSender);
-        pivotTopic.createTopic(500, address(erc20), testHash);
-        assertEq(erc20.balanceOf(address(pivotTopic)), 500);
-        assertEq(pivotTopic.getInvestment(msgSender,1), 500);
-        assertEq(pivotTopic.getFixedInvestment(1), 500);
+        pivotTopic.createTopic(5000000, address(erc20), testHash);
+        assertEq(erc20.balanceOf(address(pivotTopic)), 5000000);
+        assertEq(pivotTopic.getInvestment(msgSender,1), 5000000);
+        assertEq(pivotTopic.getFixedInvestment(1), 5000000);
         assertEq(pivotTopic.getPromoter(1), msgSender);
-        assertEq(pivotTopic._totalBalance(1), 500);
+        assertEq(pivotTopic._totalBalance(1), 5000000);
+        assertEq(pivotTopic.topicCoin(1), address(erc20));
         assertEq(pivotTopic.topicCoin(1), address(erc20));
     }
 
     function test_invest() public {
         address msgSender = msg.sender;
         vm.prank(msgSender);
-        erc20.approve(address(pivotTopic),500);
+        erc20.approve(address(pivotTopic),5000000);
         string memory hashString = "hello";
         bytes32 testHash = keccak256(abi.encodePacked(hashString));
         vm.prank(msgSender);
-        pivotTopic.createTopic(500, address(erc20), testHash);
+        pivotTopic.createTopic(5000000, address(erc20), testHash);
 
         vm.prank(owner);
-        erc20.approve(address(pivotTopic), 500);
+        erc20.approve(address(pivotTopic), 5000000);
         vm.prank(owner);
-        pivotTopic.invest(1, 500);
+        pivotTopic.invest(1, 5000000);
+
+        assertEq(pivotTopic.getInvestment(owner,1), 5000000);
+        assertEq(pivotTopic.getIncome(msgSender,1), 7500000);
+        assertEq(pivotTopic.getIncome(owner,1), 2500000);
+        assertEq(erc20.balanceOf(owner), 5000000);
+        assertEq(pivotTopic._totalBalance(1), 10000000);
+
+        vm.prank(investor);
+        erc20.approve(address(pivotTopic), 5000000);
+        vm.prank(investor);
+        pivotTopic.invest(1, 5000000);
+        assertEq(pivotTopic.getInvestment(investor,1), 5000000);
+        assertEq(pivotTopic.getIncome(investor,1), 1666666);
+        assertEq(pivotTopic.getIncome(owner,1), 4166666);
+    }
+
+    function test_withdraw() public {
+        address msgSender = msg.sender;
+        vm.prank(msgSender);
+        erc20.approve(address(pivotTopic),5000000);
+        string memory hashString = "hello";
+        bytes32 testHash = keccak256(abi.encodePacked(hashString));
+        vm.prank(msgSender);
+        pivotTopic.createTopic(5000000, address(erc20), testHash);
+
+        vm.startPrank(owner);
+        erc20.approve(address(pivotTopic), 5000000);
+        pivotTopic.invest(1, 5000000);
+        pivotTopic.withdraw(1);
+        vm.stopPrank();
+        assertEq(pivotTopic._totalBalance(1), 7500000);
+        assertEq(erc20.balanceOf(owner), 7500000);
+        assertEq(erc20.balanceOf(address(pivotTopic)), 7500000);
+        assertEq(pivotTopic.getIncome(owner,1), 0);
+    }
+
+    function test_withdrawCommission() public {
+        address msgSender = msg.sender;
+        vm.startPrank(msgSender);
+        erc20.approve(address(pivotTopic),5000000);
+        string memory hashString = "hello";
+        bytes32 testHash = keccak256(abi.encodePacked(hashString));
+        pivotTopic.createTopic(5000000, address(erc20), testHash);
+        pivotTopic.withdraw(1);
+        vm.stopPrank();
+        vm.startPrank(owner);
+        erc20.approve(address(pivotTopic), 5000000);
+        pivotTopic.invest(1, 5000000);
+        vm.stopPrank();
+        vm.prank(msgSender);
+        pivotTopic.withdraw(1);
+        assertEq(erc20.balanceOf(msgSender), 12492500);
+        assertEq(pivotTopic._totalCommission(1), 7500);
+        pivotTopic.withdrawCommission(1500, 1);
+        assertEq(pivotTopic._totalCommission(1), 6000);
+        assertEq(erc20.balanceOf(address(this)), 70001500);
     }
 }
