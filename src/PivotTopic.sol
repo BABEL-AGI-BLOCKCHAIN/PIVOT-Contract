@@ -25,8 +25,8 @@ contract PivotTopic {
 
     mapping (uint256 topicId => address) public topicCoin;
 
-    event CreateTopic(address indexed promoter, uint256 topicId, uint256 investment, uint256 nonce);
-    event Invest(address indexed investor, uint256 indexed topicId, uint256 amount, uint256 nonce);
+    event CreateTopic(address indexed promoter, uint256 topicId, uint256 investment, uint256 position, uint256 nonce);
+    event Invest(address indexed investor, uint256 indexed topicId, uint256 amount, uint256 position, uint256 nonce);
     event Withdraw(address indexed to, uint256 amount, uint256 nonce);
     event WithdrawCommission(address indexed owner, uint256 amount, uint256 nonce);
 
@@ -81,7 +81,7 @@ contract PivotTopic {
         sbtContract.mint(promoter, _topicId, position, amount);
 
 
-        emit CreateTopic(promoter, _topicId, amount, _nonce);
+        emit CreateTopic(promoter, _topicId, amount, position, _nonce);
         _nonce++;
 
     }
@@ -99,23 +99,23 @@ contract PivotTopic {
 
         uint256 position = _position[topicId] + 1;
         _investAddressMap[topicId][position] = investor;
+
+        (bool success, uint256 income) = Math.tryDiv(fixedInvestment, position);
+        require(success,"Calculate Fault");
+
         for (uint256 i = 0; i < position; i++) {
             address investAddress = _investAddressMap[topicId][i + 1];
-            (bool success, uint256 income) = Math.tryDiv(fixedInvestment, position);
-            require(success,"Calculate Fault");
             _income[investAddress][topicId] = _income[investAddress][topicId] + income;
         }
 
         sbtContract.mint(investor, topicId, position, amount);
 
-        
         _position[topicId] = position;
-        emit Invest(investor, topicId, fixedInvestment, _nonce);
+        emit Invest(investor, topicId, fixedInvestment, position, _nonce);
         _nonce ++;
     }
 
     function withdraw(uint256 topicId) public {
-
         address to = msg.sender;
         uint256 income = _income[to][topicId];
         uint256 receivedIncome =  _receivedIncome[to][topicId];
