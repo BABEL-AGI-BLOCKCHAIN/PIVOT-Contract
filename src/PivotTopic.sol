@@ -89,7 +89,7 @@ contract PivotTopic {
     function invest(uint256 topicId, uint256 amount) public {
         address investor = msg.sender;
         uint256 fixedInvestment = _fixedInvestment[topicId];
-        require(fixedInvestment == amount, "Insufficient Balance");
+        require(amount > 0 && amount%fixedInvestment == 0, "Invalid Amount");
 
         address erc20Address = topicCoin[topicId];
         IERC20 erc20Contract = IERC20(erc20Address);
@@ -119,7 +119,7 @@ contract PivotTopic {
         address to = msg.sender;
         uint256 income = _income[to][topicId];
         uint256 receivedIncome =  _receivedIncome[to][topicId];
-        require(income >= 0,"Insufficient Balance");
+        require(income > 0,"Insufficient Income");
         uint256 investment = _investment[to][topicId];
         uint256 sum = income + receivedIncome;
         if(investment > receivedIncome && investment < sum) {
