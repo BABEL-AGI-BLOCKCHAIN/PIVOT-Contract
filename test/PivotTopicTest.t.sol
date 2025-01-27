@@ -12,18 +12,22 @@ contract PivotTopicTest is Test {
 
     uint256 private ownerPrivateKey;
     uint256 private investorPrivateKey;
+    uint256 private bigAmountInvestorPrivateKey;
 
     address private owner;
     address private investor;
+    address private bigAmountInvestor;
 
     function setUp() public {
 
         ownerPrivateKey = 0xA11CE;
         investorPrivateKey = 0xB0B;
+        bigAmountInvestorPrivateKey = 0xC99;
 
         owner = vm.addr(ownerPrivateKey);
         investor = vm.addr(investorPrivateKey);
-        
+        bigAmountInvestor = vm.addr(bigAmountInvestorPrivateKey);
+
         sbt = new TopicSBT(owner, "sbt", "SBT");
 
         erc20 = new TopicERC20("erc20", "ERC20", 100000000);
@@ -32,6 +36,7 @@ contract PivotTopicTest is Test {
         erc20.transfer(owner, 10000000);
         erc20.transfer(investor, 10000000);
         erc20.transfer(msg.sender, 10000000);
+        erc20.transfer(bigAmountInvestor, 30000000);
         vm.prank(owner);
         sbt.transferOwnership(address(pivotTopic));
     }
@@ -56,7 +61,7 @@ contract PivotTopicTest is Test {
         assertEq(erc20.balanceOf(msg.sender), 10000000);
         assertEq(erc20.balanceOf(owner), 10000000);
         assertEq(erc20.balanceOf(investor), 10000000);
-        assertEq(erc20.balanceOf(address(this)), 100000000 - 30000000);
+        assertEq(erc20.balanceOf(address(this)), 100000000 - 60000000);
     }
 
 
@@ -106,6 +111,16 @@ contract PivotTopicTest is Test {
         assertEq(pivotTopic.getInvestment(investor,1), 5000000);
         assertEq(pivotTopic.getIncome(investor,1), 1666666);
         assertEq(pivotTopic.getIncome(owner,1), 4166666);
+
+        vm.startPrank(bigAmountInvestor);
+        erc20.approve(address(pivotTopic), 20000000);
+        // vm.expectRevert();
+        // pivotTopic.invest(1, 1000000);
+        // vm.expectRevert();
+        // pivotTopic.invest(1, 7999999);
+
+        pivotTopic.invest(1, 20000000);
+        vm.stopPrank;
     }
 
     function test_withdraw() public {
@@ -147,6 +162,6 @@ contract PivotTopicTest is Test {
         assertEq(pivotTopic._totalCommission(1), 7500);
         pivotTopic.withdrawCommission(1500, 1);
         assertEq(pivotTopic._totalCommission(1), 6000);
-        assertEq(erc20.balanceOf(address(this)), 70001500);
+        assertEq(erc20.balanceOf(address(this)), 40001500);
     }
 }
