@@ -15,7 +15,7 @@ Foundry consists of:
 
 | Network | PivotTopic                                 | TopicSBT                                   | TopicERC20                                 |
 | ------- | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
-| Sepolia | 0x9Af4f4b7C831b0c79574CCDE7C04e33F99BF6438 | 0x9b11f74888dF35573B934567088578eEe485B663 | 0x83F3c5020Ef0f44C8Ef4993124740D3fe8D1470C |
+| Sepolia | 0x9b764159249880e2d6B9a7F86495371c45aB69bC | 0xB12bc42ACFA0E8b270E79c07c5469eF3AE342151 | 0x83F3c5020Ef0f44C8Ef4993124740D3fe8D1470C |
 
 ### Mainnets
 
@@ -64,7 +64,7 @@ $ anvil
 ### Deploy
 
 ```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+$ forge script script/Topic.s.sol --rpc-url <your_rpc_url> --private-key <your_private_key> --broadcast
 ```
 
 ### Cast
