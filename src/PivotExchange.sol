@@ -37,6 +37,10 @@ contract Exchange is Ownable {
     event Withdrawn(address indexed token, uint256 amount);
     event DailyLimitUpdated(address indexed sourceToken, uint256 newLimit);
 
+    constructor(address initialOwner) Ownable(initialOwner) {
+        
+    }
+
     function setPair(
         address sourceToken,
         address targetToken,
