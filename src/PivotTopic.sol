@@ -25,7 +25,7 @@ contract PivotTopic {
 
     mapping (uint256 topicId => address) public topicCoin;
 
-    event CreateTopic(address indexed promoter, uint256 topicId, uint256 investment, uint256 position, uint256 nonce);
+    event CreateTopic(address indexed promoter, uint256 topicId, uint256 investment, uint256 position, address tokenAddress, uint256 nonce);
     event Invest(address indexed investor, uint256 indexed topicId, uint256 amount, uint256 position, uint256 nonce);
     event Withdraw(address indexed to, uint256 amount, uint256 nonce);
     event WithdrawCommission(address indexed owner, uint256 amount, uint256 nonce);
@@ -81,7 +81,7 @@ contract PivotTopic {
         sbtContract.mint(promoter, _topicId, position, amount);
 
 
-        emit CreateTopic(promoter, _topicId, amount, position, _nonce);
+        emit CreateTopic(promoter, _topicId, amount, position, erc20Address, _nonce);
         _nonce++;
 
     }
@@ -111,7 +111,7 @@ contract PivotTopic {
         sbtContract.mint(investor, topicId, position, amount);
 
         _position[topicId] = position;
-        emit Invest(investor, topicId, fixedInvestment, position, _nonce);
+        emit Invest(investor, topicId, amount, position, _nonce);
         _nonce ++;
     }
 
