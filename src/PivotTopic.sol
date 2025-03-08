@@ -18,6 +18,7 @@ contract PivotTopic {
     mapping (uint256 topicId => bytes32) public _topicHash;
     mapping (uint256 topicId => uint256[]) private _prefixSums; // prefixSums[i] = sum_{k=1}^{i+1} (fixedInvestment / k)
     mapping (address investor => mapping(uint256 topicId => uint256)) private _receivedIncome;
+    mapping (address investor => mapping(uint256 topicId => mapping(uint256 position => uint256))) private _positionReceivedIncome;
     mapping (address investor => mapping(uint256 topicId => uint256)) private _investment;
     mapping (uint256 topicId => uint256) private _fixedInvestment;
     mapping (uint256 topicId => uint256) private _position;
@@ -121,28 +122,29 @@ contract PivotTopic {
             income = _prefixSums[topicId][currentPosition - 1] - _prefixSums[topicId][position - 2];
         }
         
-        uint256 receivedIncome =  _receivedIncome[to][topicId];
+        uint256 positionReceivedIncome =  _positionReceivedIncome[to][topicId][position];
         require(income > 0,"Insufficient Income");
-        uint256 investment = _investment[to][topicId];
+        uint256 positionInvestment = _fixedInvestment[topicId];
 
-        if(investment > receivedIncome && investment < income) {
-            (bool success, uint256 diff) = Math.trySub(income, investment);
+        if(positionInvestment > positionReceivedIncome && positionInvestment < income) {
+            (bool success, uint256 diff) = Math.trySub(income, positionInvestment);
             require(success,"Calculate Fault");
             uint256 commission = diff / 1000 * _commissionrate;
             _totalCommission[topicId] = _totalCommission[topicId] + commission;
-            income = income - commission - receivedIncome;
+            income = income - commission - positionReceivedIncome;
         }
 
-        if(investment <= receivedIncome) {
-            uint256 commission = (income - receivedIncome) / 1000 * _commissionrate;
+        if(positionInvestment <= positionReceivedIncome) {
+            uint256 commission = (income - positionReceivedIncome) / 1000 * _commissionrate;
             _totalCommission[topicId] = _totalCommission[topicId] + commission;
-            income = income - receivedIncome - commission;            
+            income = income - positionReceivedIncome - commission;            
         }
 
         address erc20Address = topicCoin[topicId];
         IERC20 erc20Contract = IERC20(erc20Address);
         erc20Contract.transfer(to, income);
         _receivedIncome[to][topicId] = _receivedIncome[to][topicId] + income;
+        _positionReceivedIncome[to][topicId][position] = positionReceivedIncome + income;
         _totalBalance[topicId] = _totalBalance[topicId] - income;
         emit Withdraw(msg.sender, income, _nonce);
         _nonce ++;
