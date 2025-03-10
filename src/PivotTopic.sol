@@ -17,12 +17,12 @@ contract PivotTopic {
     mapping (uint256 topicId => address) private _promoter;
     mapping (uint256 topicId => bytes32) public _topicHash;
     mapping (uint256 topicId => uint256[]) private _prefixSums; // prefixSums[i] = sum_{k=1}^{i+1} (fixedInvestment / k)
-    mapping (address investor => mapping(uint256 topicId => uint256)) private _receivedIncome;
-    mapping (address investor => mapping(uint256 topicId => mapping(uint256 position => uint256))) private _positionReceivedIncome;
+    mapping (address investor => mapping(uint256 topicId => uint256)) public _receivedIncome;
+    mapping (address investor => mapping(uint256 topicId => mapping(uint256 position => uint256))) public _positionReceivedIncome;
     mapping (address investor => mapping(uint256 topicId => uint256)) private _investment;
     mapping (uint256 topicId => uint256) private _fixedInvestment;
-    mapping (uint256 topicId => uint256) private _position;
-    mapping (uint256 topicId => mapping(uint256 position => address)) private _investAddressMap;
+    mapping (uint256 topicId => uint256) public _position;
+    mapping (uint256 topicId => mapping(uint256 position => address)) public _investAddressMap;
 
     mapping (uint256 topicId => address) public topicCoin;
 
