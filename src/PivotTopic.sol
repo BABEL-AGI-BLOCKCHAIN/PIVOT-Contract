@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
-
+import "forge-std/console.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -16,12 +16,13 @@ contract PivotTopic {
     mapping (uint256 topicId => uint256) public _totalBalance;
     mapping (uint256 topicId => address) private _promoter;
     mapping (uint256 topicId => bytes32) public _topicHash;
-    mapping (address investor => mapping(uint256 topicId => uint256)) private _income;
-    mapping (address investor => mapping(uint256 topicId => uint256)) private _receivedIncome;
+    mapping (uint256 topicId => uint256[]) private _prefixSums; // prefixSums[i] = sum_{k=1}^{i+1} (fixedInvestment / k)
+    mapping (address investor => mapping(uint256 topicId => uint256)) public _receivedIncome;
+    mapping (address investor => mapping(uint256 topicId => mapping(uint256 position => uint256))) public _positionReceivedIncome;
     mapping (address investor => mapping(uint256 topicId => uint256)) private _investment;
     mapping (uint256 topicId => uint256) private _fixedInvestment;
-    mapping (uint256 topicId => uint256) private _position;
-    mapping (uint256 topicId => mapping(uint256 position => address)) private _investAddressMap;
+    mapping (uint256 topicId => uint256) public _position;
+    mapping (uint256 topicId => mapping(uint256 position => address)) public _investAddressMap;
 
     mapping (uint256 topicId => address) public topicCoin;
 
@@ -38,9 +39,6 @@ contract PivotTopic {
         _nonce = 0;
     }
 
-    function getIncome(address investor, uint256 topicId) public view returns(uint256) {
-        return _income[investor][topicId];
-    }
 
     function getInvestment(address investor, uint256 topicId) public view returns(uint256) {
         return _investment[investor][topicId];
@@ -76,7 +74,7 @@ contract PivotTopic {
         IERC20 erc20Contract = IERC20(erc20Address);
         erc20Contract.transferFrom(promoter, address(this), amount);
         _investment[promoter][_topicId] = amount;
-        _income[promoter][_topicId] = amount;
+        _prefixSums[_topicId].push(amount);
         _totalBalance[_topicId] = amount;
         sbtContract.mint(promoter, _topicId, position, amount);
 
@@ -97,53 +95,56 @@ contract PivotTopic {
         _investment[investor][topicId] = _investment[investor][topicId] + amount;
         _totalBalance[topicId] = _totalBalance[topicId] + amount;
 
-        uint256 position = _position[topicId] + 1;
-        _investAddressMap[topicId][position] = investor;
+        uint256 position = _position[topicId];
+        for (uint256 i = 0; i < amount/fixedInvestment; i++) {
+            position++;
+            _investAddressMap[topicId][position] = investor;
+            (bool success, uint256 delta) = Math.tryDiv(fixedInvestment, position);
+            require(success,"Calculate Fault");
 
-        (bool success, uint256 income) = Math.tryDiv(fixedInvestment, position);
-        require(success,"Calculate Fault");
-
-        for (uint256 i = 0; i < position; i++) {
-            address investAddress = _investAddressMap[topicId][i + 1];
-            _income[investAddress][topicId] = _income[investAddress][topicId] + income;
+            _prefixSums[topicId].push(_prefixSums[topicId][position - 2] + delta);
+            sbtContract.mint(investor, topicId, position, amount);
+            _position[topicId] = position;
+            emit Invest(investor, topicId, amount, position, _nonce);
+            _nonce ++;
         }
-
-        sbtContract.mint(investor, topicId, position, amount);
-
-        _position[topicId] = position;
-        emit Invest(investor, topicId, amount, position, _nonce);
-        _nonce ++;
     }
 
-    function withdraw(uint256 topicId) public {
+    //按position领取
+    function withdraw(uint256 topicId, uint256 position) public {
         address to = msg.sender;
-        uint256 income = _income[to][topicId];
-        uint256 receivedIncome =  _receivedIncome[to][topicId];
+        require(_investAddressMap[topicId][position] == to, "Invalid TopicId Or Position");
+        uint256 currentPosition = _position[topicId];
+        uint256 income = 0;
+        if (position == 1) {
+            income = _prefixSums[topicId][currentPosition - 1];
+        } else {
+            income = _prefixSums[topicId][currentPosition - 1] - _prefixSums[topicId][position - 2];
+        }
+        
+        uint256 positionReceivedIncome =  _positionReceivedIncome[to][topicId][position];
         require(income > 0,"Insufficient Income");
-        uint256 investment = _investment[to][topicId];
-        uint256 sum = income + receivedIncome;
-        if(investment > receivedIncome && investment < sum) {
-            (bool success, uint256 diff) = Math.trySub(sum, investment);
+        uint256 positionInvestment = _fixedInvestment[topicId];
+
+        if(positionInvestment > positionReceivedIncome && positionInvestment < income) {
+            (bool success, uint256 diff) = Math.trySub(income, positionInvestment);
             require(success,"Calculate Fault");
             uint256 commission = diff / 1000 * _commissionrate;
             _totalCommission[topicId] = _totalCommission[topicId] + commission;
-            (success,income) = Math.trySub(income, commission);
-            require(success,"Calculate Fault");
+            income = income - commission - positionReceivedIncome;
         }
 
-        if(investment <= receivedIncome) {
-            uint256 commission = income / 1000 * _commissionrate;
+        if(positionInvestment <= positionReceivedIncome) {
+            uint256 commission = (income - positionReceivedIncome) / 1000 * _commissionrate;
             _totalCommission[topicId] = _totalCommission[topicId] + commission;
-            bool success;
-            (success,income) = Math.trySub(income, commission);
-            require(success,"Calculate Fault");
+            income = income - positionReceivedIncome - commission;            
         }
 
         address erc20Address = topicCoin[topicId];
         IERC20 erc20Contract = IERC20(erc20Address);
         erc20Contract.transfer(to, income);
-        _income[to][topicId] = 0;
         _receivedIncome[to][topicId] = _receivedIncome[to][topicId] + income;
+        _positionReceivedIncome[to][topicId][position] = positionReceivedIncome + income;
         _totalBalance[topicId] = _totalBalance[topicId] - income;
         emit Withdraw(msg.sender, income, _nonce);
         _nonce ++;

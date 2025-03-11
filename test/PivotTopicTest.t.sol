@@ -99,8 +99,6 @@ contract PivotTopicTest is Test {
         pivotTopic.invest(1, 5000000);
 
         assertEq(pivotTopic.getInvestment(owner,1), 5000000);
-        assertEq(pivotTopic.getIncome(msgSender,1), 7500000);
-        assertEq(pivotTopic.getIncome(owner,1), 2500000);
         assertEq(erc20.balanceOf(owner), 5000000);
         assertEq(pivotTopic._totalBalance(1), 10000000);
 
@@ -109,8 +107,6 @@ contract PivotTopicTest is Test {
         vm.prank(investor);
         pivotTopic.invest(1, 5000000);
         assertEq(pivotTopic.getInvestment(investor,1), 5000000);
-        assertEq(pivotTopic.getIncome(investor,1), 1666666);
-        assertEq(pivotTopic.getIncome(owner,1), 4166666);
 
         vm.startPrank(bigAmountInvestor);
         erc20.approve(address(pivotTopic), 20000000);
@@ -135,12 +131,11 @@ contract PivotTopicTest is Test {
         vm.startPrank(owner);
         erc20.approve(address(pivotTopic), 5000000);
         pivotTopic.invest(1, 5000000);
-        pivotTopic.withdraw(1);
+        pivotTopic.withdraw(1,2);
         vm.stopPrank();
         assertEq(pivotTopic._totalBalance(1), 7500000);
         assertEq(erc20.balanceOf(owner), 7500000);
         assertEq(erc20.balanceOf(address(pivotTopic)), 7500000);
-        assertEq(pivotTopic.getIncome(owner,1), 0);
     }
 
     function test_withdrawCommission() public {
@@ -150,14 +145,14 @@ contract PivotTopicTest is Test {
         string memory hashString = "hello";
         bytes32 testHash = keccak256(abi.encodePacked(hashString));
         pivotTopic.createTopic(5000000, address(erc20), testHash);
-        pivotTopic.withdraw(1);
+        pivotTopic.withdraw(1,1);
         vm.stopPrank();
         vm.startPrank(owner);
         erc20.approve(address(pivotTopic), 5000000);
         pivotTopic.invest(1, 5000000);
         vm.stopPrank();
         vm.prank(msgSender);
-        pivotTopic.withdraw(1);
+        pivotTopic.withdraw(1,1);
         assertEq(erc20.balanceOf(msgSender), 12492500);
         assertEq(pivotTopic._totalCommission(1), 7500);
         pivotTopic.withdrawCommission(1500, 1);
