@@ -15,7 +15,7 @@ Foundry consists of:
 
 | Network | PivotTopic                                 | TopicSBT                                   | TopicERC20                                 |
 | ------- | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
-| Sepolia | 0x82a167f1Df8C2e9616D7721B0Ca743b7A3825C38 | 0x03cfCbF3F5EdEAb5b243264319b8869d0862ccCe | 0x83F3c5020Ef0f44C8Ef4993124740D3fe8D1470C |
+| Sepolia | 0x5a03f77edf64f184F177e98EC1a04303b2192Bf1 | 0x5a53739e9ba12D0592678593e655e497cE8E4591 | 0x83F3c5020Ef0f44C8Ef4993124740D3fe8D1470C |
 
 ### Mainnets
 
