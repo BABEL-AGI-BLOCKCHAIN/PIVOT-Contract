@@ -9,7 +9,7 @@ contract PivotTopic {
     address public sbtAddress;
     ISBTContract public sbtContract;
     uint256 private _topicId;
-    uint16  private _commissionrate = 3;
+    uint16  public _commissionrate = 3;
     uint256 private _nonce;
 
     mapping (uint256 topicId => uint256) public _totalCommission;
