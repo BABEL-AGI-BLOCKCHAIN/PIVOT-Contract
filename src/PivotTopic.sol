@@ -105,7 +105,7 @@ contract PivotTopic {
             _prefixSums[topicId].push(_prefixSums[topicId][position - 2] + delta);
             sbtContract.mint(investor, topicId, position, amount);
             _position[topicId] = position;
-            emit Invest(investor, topicId, amount, position, _nonce);
+            emit Invest(investor, topicId, fixedInvestment, position, _nonce);
             _nonce ++;
         }
     }
