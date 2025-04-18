@@ -103,7 +103,7 @@ contract PivotTopic {
             require(success,"Calculate Fault");
 
             _prefixSums[topicId].push(_prefixSums[topicId][position - 2] + delta);
-            sbtContract.mint(investor, topicId, position, amount);
+            sbtContract.mint(investor, topicId, position, fixedInvestment);
             _position[topicId] = position;
             emit Invest(investor, topicId, fixedInvestment, position, _nonce);
             _nonce ++;
